@@ -62,11 +62,11 @@ func usageExit(cmds []Command, status int) {
 
 // Usage prints a help message listing the possible commands.
 var Usage = func(cmds []Command) {
-	fmt.Fprintf(os.Stderr, "Usage:\n  %s COMMAND\nPossible commands are:\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage:\n\n  %s COMMAND\n\nPossible commands are:\n\n", os.Args[0])
 	PrintDefaults(cmds)
 	fmt.Fprintf(
 		os.Stderr,
-		"Use %s COMMAND -h to see more information about a command.\n",
+		"\nRun '%s COMMAND -h' to see more information about a command.\n",
 		os.Args[0],
 	)
 }
