@@ -16,7 +16,13 @@ var cmds = []subcmd.Command{
 	{
 		Name:        "baz",
 		Description: "seek the manxome foe",
-		Do:          bar,
+		SubCommands: []subcmd.Command{
+			{
+				Name:        "bazinga",
+				Description: "ble bu li ke",
+				Do:          bazinga,
+			},
+		},
 	},
 }
 
@@ -27,8 +33,8 @@ func foo(args []string) {
 	fmt.Println("a:", *a)
 }
 
-func bar(args []string) {
-	fs := flag.NewFlagSet("bar", flag.ExitOnError)
+func bazinga(args []string) {
+	fs := flag.NewFlagSet("bazinga", flag.ExitOnError)
 	n := fs.Int("n", 10, "Number of blah")
 	fs.Parse(args)
 	fmt.Println("n:", *n)

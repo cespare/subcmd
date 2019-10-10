@@ -3,6 +3,7 @@ package subcmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -11,6 +12,7 @@ type Command struct {
 	Name        string
 	Description string
 	Do          func(args []string)
+	SubCommands []Command
 }
 
 // Run parses os.Args and dispatches to the correct subcommand given by cmds.
@@ -21,7 +23,14 @@ type Command struct {
 // Run panics if any command is named "help", "-h", "-help", or "--help",
 // or if any two commands have the same name.
 func Run(cmds []Command) {
+	run(cmds, 1, os.Args)
+}
+
+// checkingIndex is the index of os.Args to dispatch to the correct subcommand given
+// by cmds.
+func run(cmds []Command, checkingIndex int, args []string) {
 	byName := make(map[string]func([]string))
+	subCmdByName := make(map[string][]Command)
 	for _, cmd := range cmds {
 		if _, ok := helpWords[cmd.Name]; ok {
 			panicf("subcmd: cannot name a command %q", cmd.Name)
@@ -29,19 +38,31 @@ func Run(cmds []Command) {
 		if _, ok := byName[cmd.Name]; ok {
 			panicf("subcmd: duplicate command %q given to Run", cmd.Name)
 		}
-		byName[cmd.Name] = cmd.Do
+		if cmd.Do != nil {
+			byName[cmd.Name] = cmd.Do
+		} else if cmd.SubCommands != nil {
+			subCmdByName[cmd.Name] = cmd.SubCommands
+		} else {
+			panicf("subcmd: empty command %q", cmd.Name)
+		}
 	}
-	if len(os.Args) < 2 {
-		usageExit(cmds, 1)
+	if len(args) < 2 {
+		usageExit(cmds, checkingIndex, 1)
 	}
-	if _, ok := helpWords[os.Args[1]]; ok {
-		usageExit(cmds, 0)
+	if _, ok := helpWords[args[1]]; ok {
+		usageExit(cmds, checkingIndex, 0)
 	}
-	do, ok := byName[os.Args[1]]
-	if !ok {
-		usageExit(cmds, 1)
+	subCmds, ok := subCmdByName[args[1]]
+	if ok {
+		run(subCmds, checkingIndex+1, args[1:])
+		return
 	}
-	do(os.Args[2:])
+	do, ok := byName[args[1]]
+	if ok {
+		do(args[2:])
+		return
+	}
+	usageExit(cmds, checkingIndex, 1)
 }
 
 func panicf(format string, args ...interface{}) {
@@ -55,19 +76,20 @@ var helpWords = map[string]struct{}{
 	"--help": {},
 }
 
-func usageExit(cmds []Command, status int) {
-	Usage(cmds)
+func usageExit(cmds []Command, checkingIndex, status int) {
+	Usage(cmds, checkingIndex)
 	os.Exit(status)
 }
 
 // Usage prints a help message listing the possible commands.
-var Usage = func(cmds []Command) {
-	fmt.Fprintf(os.Stderr, "Usage:\n\n  %s COMMAND\n\nPossible commands are:\n\n", os.Args[0])
+var Usage = func(cmds []Command, checkingIndex int) {
+	parsedArgs := strings.Join(os.Args[:checkingIndex], " ")
+	fmt.Fprintf(os.Stderr, "Usage:\n\n  %s COMMAND\n\nPossible commands are:\n\n", parsedArgs)
 	PrintDefaults(cmds)
 	fmt.Fprintf(
 		os.Stderr,
 		"\nRun '%s COMMAND -h' to see more information about a command.\n",
-		os.Args[0],
+		parsedArgs,
 	)
 }
 
