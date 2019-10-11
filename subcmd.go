@@ -38,12 +38,13 @@ func run(cmds []Command, checkingIndex int, args []string) {
 		if _, ok := byName[cmd.Name]; ok {
 			panicf("subcmd: duplicate command %q given to Run", cmd.Name)
 		}
+		if (cmd.Do != nil) == (cmd.SubCommands != nil) {
+			panicf("subcmd: need to assign either Do or SubCommands in command %q", cmd.Name)
+		}
 		if cmd.Do != nil {
 			byName[cmd.Name] = cmd.Do
-		} else if cmd.SubCommands != nil {
-			subCmdByName[cmd.Name] = cmd.SubCommands
 		} else {
-			panicf("subcmd: empty command %q", cmd.Name)
+			subCmdByName[cmd.Name] = cmd.SubCommands
 		}
 	}
 	if len(args) < 2 {
